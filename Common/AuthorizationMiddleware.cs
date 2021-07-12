@@ -4,13 +4,13 @@ using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
-using FileUpload.Repositories;
-using FileUpload.Entities;
+using System.Configuration;
 
 namespace FileUpload.Common
 {
@@ -18,12 +18,10 @@ namespace FileUpload.Common
     {
         private readonly RequestDelegate next;
         private IConfiguration config;
-        IUserRepository userRepository { get; set; }
-        public AuthorizationMiddleware(IConfiguration _config, RequestDelegate _next, IUserRepository _userRepository)
+        public AuthorizationMiddleware(IConfiguration _config, RequestDelegate _next)
         {
             next = _next;
             config = _config;
-            userRepository = _userRepository;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -37,24 +35,45 @@ namespace FileUpload.Common
                 }
                 else
                 {
+
+                    var mySecret = config["Jwt:Key"];
+                    var mySecurityKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(mySecret));
+
+                    var myIssuer = config["Jwt:Issuer"];
+                    var myAudience = config["Jwt:Issuer"];
+
+                    var tokenHandler = new JwtSecurityTokenHandler();
+
                     if (encryptedAccessToken.Contains("Bearer"))
                     {
                         encryptedAccessToken = encryptedAccessToken.Replace("Bearer ", "");
                     }
 
                     string accessToken = encryptedAccessToken;
-                    var isValidToken = await userRepository.checkAuthTokenValidOrNot(accessToken);
 
-                    if (isValidToken) {
+                    var principal = tokenHandler.ValidateToken(accessToken, new TokenValidationParameters
+                    {
+                        ValidateIssuerSigningKey = true,
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidIssuer = myIssuer,
+                        ValidAudience = myAudience,
+                        IssuerSigningKey = mySecurityKey,
+                        ValidateLifetime = true,
+                        ClockSkew = TimeSpan.Zero,
+                    }, out SecurityToken validatedToken);
+
+
+
+                    if (principal.HasClaim(c => c.Type == JwtRegisteredClaimNames.Jti))
+                    {
+                        context.User = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+                                        {
+                                            new Claim(ClaimTypes.Name, principal.Identity.Name)
+                                        }, "BasicAuthentication"));
+                        context.User.AddIdentity((ClaimsIdentity)principal.Identity);
+
                         await next.Invoke(context);
-                    } else {
-                        context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                        context.Response.ContentType = "application/json";
-                        await context.Response.WriteAsync(JsonConvert.SerializeObject((new
-                        {
-                            StatusCode = 401,
-                            message = "Token expired",
-                        })));
                     }
                 }
             }
@@ -66,7 +85,7 @@ namespace FileUpload.Common
                     context.Response.ContentType = "application/json";
                     await context.Response.WriteAsync(JsonConvert.SerializeObject((new
                     {
-                        StatusCode = 401,
+                        StatusCode = StatusCodes.TokenExpired,
                         message = "Token expired",
                     })));
                 }
@@ -76,7 +95,7 @@ namespace FileUpload.Common
                     context.Response.ContentType = "application/json";
                     await context.Response.WriteAsync(JsonConvert.SerializeObject((new
                     {
-                        StatusCode = 401,
+                        StatusCode = StatusCodes.InvalidToken,
                         message = "Invalid token",
                     })));
                 }
@@ -87,7 +106,7 @@ namespace FileUpload.Common
                     context.Response.ContentType = "application/json";
                     await context.Response.WriteAsync(JsonConvert.SerializeObject((new
                     {
-                        StatusCode = 500,
+                        StatusCode = StatusCodes.ServerError,
                         message = ex.Message.ToString(),
                     })));
                 }

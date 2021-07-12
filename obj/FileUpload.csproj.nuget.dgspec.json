@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "/var/www/html/cj/FileUpload/FileUpload.csproj": {}
+    "/var/www/html/cj/cjrepo/cjdemodotnet/FileUpload.csproj": {}
   },
   "projects": {
-    "/var/www/html/cj/FileUpload/FileUpload.csproj": {
+    "/var/www/html/cj/cjrepo/cjdemodotnet/FileUpload.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/var/www/html/cj/FileUpload/FileUpload.csproj",
+        "projectUniqueName": "/var/www/html/cj/cjrepo/cjdemodotnet/FileUpload.csproj",
         "projectName": "FileUpload",
-        "projectPath": "/var/www/html/cj/FileUpload/FileUpload.csproj",
+        "projectPath": "/var/www/html/cj/cjrepo/cjdemodotnet/FileUpload.csproj",
         "packagesPath": "/home/tarak/.nuget/packages/",
-        "outputPath": "/var/www/html/cj/FileUpload/obj/",
+        "outputPath": "/var/www/html/cj/cjrepo/cjdemodotnet/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/home/tarak/.nuget/NuGet/NuGet.Config"
@@ -42,6 +42,14 @@
               "target": "Package",
               "version": "[5.7.1, )"
             },
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+              "target": "Package",
+              "version": "[5.0.7, )"
+            },
+            "Microsoft.AspNetCore.Mvc.NewtonsoftJson": {
+              "target": "Package",
+              "version": "[5.0.7, )"
+            },
             "Microsoft.EntityFrameworkCore.InMemory": {
               "target": "Package",
               "version": "[5.0.7, )"
@@ -65,6 +73,10 @@
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[5.6.3, )"
+            },
+            "System.IdentityModel.Tokens.Jwt": {
+              "target": "Package",
+              "version": "[6.11.1, )"
             }
           },
           "imports": [

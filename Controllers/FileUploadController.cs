@@ -13,7 +13,6 @@ namespace FileUpload.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    // [Authorize(AuthenticationSchemes = "bearer")]
     public class FileUploadController : BaseController
     {
 
@@ -24,7 +23,6 @@ namespace FileUpload.Controllers
             fileUploadService = _fileUploadService;
         }
 
-        [AllowAnonymous]
         [HttpPost("getfiledata")]
         public async Task<IActionResult> GetFileData(IFormFile file)
         {

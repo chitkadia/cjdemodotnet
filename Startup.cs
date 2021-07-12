@@ -1,9 +1,13 @@
 using System;
+using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -12,11 +16,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authorization;
+using Newtonsoft.Json;
 using FileUpload.Common;
 using FileUpload.Repositories;
 using FileUpload.Services;
 using AuthorizationMiddleware = FileUpload.Common.AuthorizationMiddleware;
-using Microsoft.AspNetCore.Authorization;
 
 namespace FileUpload
 {
@@ -41,15 +47,51 @@ namespace FileUpload
                         .AllowAnyMethod()
                         .AllowAnyHeader());
             });
-            services.AddMvc();
+            services.AddMvc().AddNewtonsoftJson();
             _ = services.Configure<KestrelServerOptions>(options =>
               {
                   options.AllowSynchronousIO = true;
               });
-            services.AddControllers();
-            services.AddSwaggerGen(c =>
+            services.AddScoped<CustomActionFilter>();
+            services.AddControllers(config =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "FileUpload", Version = "v1" });
+                config.Filters.Add(typeof(CustomActionFilter));
+            });
+
+            services.AddSwaggerGen(swagger =>
+            {
+                //This is to generate the Default UI of Swagger Documentation
+                swagger.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Version = "3.0",
+                    Title = "JWT Token Authentication API",
+                    Description = "ASP.NET Core 3.1 Web API"
+                });
+                // To Enable authorization using Swagger (JWT)
+                swagger.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 12345abcdef\"",
+                });
+                swagger.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                          new OpenApiSecurityScheme
+                            {
+                                Reference = new OpenApiReference
+                                {
+                                    Type = ReferenceType.SecurityScheme,
+                                    Id = "Bearer"
+                                }
+                            },
+                            new string[] {}
+
+                    }
+                });
             });
 
             services.AddAuthorization(options =>
@@ -62,8 +104,35 @@ namespace FileUpload
 
             services.AddAuthentication(option =>
             {
-                option.DefaultAuthenticateScheme = "bearer";
-                option.DefaultChallengeScheme = "bearer";
+                option.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                option.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+
+            }).AddJwtBearer(options =>
+            {
+                options.Events = new JwtBearerEvents();
+                options.Events.OnChallenge = context =>
+                {
+                    // Skip the default logic.
+                    context.HandleResponse();
+
+                    return context.Response.WriteAsync(JsonConvert.SerializeObject((new
+                    {
+                        StatusCode = Common.StatusCodes.UnAuthorised,
+                        message = "UnAuthorized Access",
+                        data = string.Empty
+                    })));
+                };
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ClockSkew = TimeSpan.Zero,
+                    ValidIssuer = Configuration["Jwt:Issuer"],
+                    ValidAudience = Configuration["Jwt:Issuer"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:Key"])) //Configuration["JwtToken:SecretKey"]
+                };
             });
         }
 
@@ -78,7 +147,6 @@ namespace FileUpload
 
             app.UseMiddleware(typeof(AuthorizationMiddleware));
 
-            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>

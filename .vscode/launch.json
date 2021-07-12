@@ -9,9 +9,9 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/FileUpload/bin/Debug/net5.0/FileUpload.dll",
+            "program": "${workspaceFolder}/bin/Debug/net5.0/FileUpload.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/FileUpload",
+            "cwd": "${workspaceFolder}",
             "stopAtEntry": false,
             "serverReadyAction": {
                 "action": "openExternally",
