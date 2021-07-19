@@ -11,7 +11,7 @@ namespace FileUpload.Controllers
     [Produces("application/json")]
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Policy = nameof(Policy.Account))]
+    // [Authorize(Policy = nameof(Policy.Account))]
 
     //[Authorize(AuthenticationSchemes = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)]
     public class BaseController : ControllerBase
